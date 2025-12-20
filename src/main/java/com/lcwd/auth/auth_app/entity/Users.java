@@ -30,8 +30,6 @@ public class Users {
     private boolean enable=true;
     private Instant createdAt = Instant.now();
     private Instant updatedAt = Instant.now();
-//    private String gender;
-//    private Address address;
     @Enumerated(EnumType.STRING)
     private Provider provider=Provider.LOCAL;
     @ManyToMany(fetch = FetchType.EAGER)
@@ -39,12 +37,14 @@ public class Users {
                joinColumns = @JoinColumn(name = "user_id"),
                inverseJoinColumns = @JoinColumn(name ="roles_id"))
     private Set<Roles> roles=new HashSet<>();
+
     @PrePersist
     protected void onCreate(){
       Instant now=Instant.now();
       if(createdAt == null) createdAt = now;
       updatedAt = now;
     }
+
     @PreUpdate
     protected void onUpdate(){
         updatedAt=Instant.now();
