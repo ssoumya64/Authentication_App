@@ -18,3 +18,13 @@ spring:
 logging:
   level:
     org.springframework.security: DEBUG
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:e8c1f4a9b2d7c6e03a5f9b8d1c7a4e2b}
+    issuer: ${JWT_ISSUER:api.substring.com}
+    access-ttl-seconds: ${JWT_ACCESS_TTL_SECOND:3600}
+    refresh-ttl-seconds: ${JWT_ACCESS_TTL_SECOND:3600}
+    refresh-token-cookie-name: ${JWT_REFRESH_COOKIE_NAME:refreshToken}
+    cookie-secure: ${JWT_COOKIE_HTTP_ONLY:true}
+    cookie-same-site: ${JWT_COOKIE_SAME_SITE:lax}
