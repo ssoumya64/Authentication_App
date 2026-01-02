@@ -4,6 +4,8 @@ import com.lcwd.auth.auth_app.entity.Roles;
 import com.lcwd.auth.auth_app.entity.Users;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Service;
@@ -20,6 +22,8 @@ import java.util.stream.Collectors;
 import static java.util.logging.Level.parse;
 
 @Service
+@Getter
+@Setter
 public class JwtService {
 
     private final SecretKey key;
@@ -61,7 +65,7 @@ public class JwtService {
                         "roles", roles,
                         "typ", "access"
                 ))
-                .signWith(key, SignatureAlgorithm.HS512)
+                .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
 

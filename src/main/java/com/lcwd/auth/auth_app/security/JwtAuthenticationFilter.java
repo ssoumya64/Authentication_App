@@ -1,5 +1,6 @@
 package com.lcwd.auth.auth_app.security;
 
+import com.lcwd.auth.auth_app.helper.UserHelper;
 import com.lcwd.auth.auth_app.Repository.UserRepository;
 import io.jsonwebtoken.*;
 import jakarta.servlet.FilterChain;
@@ -28,48 +29,69 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserRepository userRepository;
-    private Logger logger=LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+    private Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+
         String header = request.getHeader("Authorization");
-        logger.info(header);
-        if(header!=null && header.startsWith("Bearer ")){
-            //Token extract and validate then athentication create then set inside security context
+        logger.info("Authorization header : {}", header);
 
-        }
-        String token = header.substring(7);
-        if(!jwtService.isAccessToken(token)){
-            filterChain.doFilter(request,response);
-            return;
-        }
-        try {
-            Jws<Claims> parseToken = jwtService.parseToken(token);
-            Claims payload = parseToken.getPayload();
-            String userId = payload.getSubject();
-            UUID userUUID = UUID.fromString(userId);
-            userRepository.findById(userUUID)
-                    .ifPresent(user->{
-                      if(user.isEnable()){
-                          List<GrantedAuthority> authorities=user.getRoles()==null? List.of(): user.getRoles().stream()
-                                  .map(roles ->
-                                          new SimpleGrantedAuthority(roles.getName())).collect(Collectors.toList());
-                          UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(user.getEmail(), null, authorities);
-                          authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                          if(SecurityContextHolder.getContext().getAuthentication()==null) {
-                              SecurityContextHolder.getContext().setAuthentication(authenticationToken);
-                          }
-                      }
+        if (header != null && header.startsWith("Bearer ")) {
 
-                    });
-        }catch (ExpiredJwtException e){
-            e.printStackTrace();
 
-        }catch (MalformedJwtException e){
-            e.printStackTrace();
-        }catch (JwtException e){
-            e.printStackTrace();
-        }catch (Exception e){
-            e.printStackTrace();
+            //token extract and validate then authentication create and then security context ke ander set karunga.
+
+            String token = header.substring(7);
+            //check for access token
+
+            try {
+
+                if (!jwtService.isAccessToken(token)) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
+
+                Jws<Claims> parse = jwtService.parseToken(token);
+
+
+                Claims payload = parse.getPayload();
+
+
+                String userId = payload.getSubject();
+                UUID userUuid = UserHelper.parseUUID(userId);
+
+                userRepository.findById(userUuid).ifPresent(user -> {
+
+                    //check for user enable or not
+
+                    if (user.isEnable()) {
+                        // user mil chuka hai database se
+                        List<GrantedAuthority> authorities = user.getRoles() == null ? List.of() : user.getRoles().stream().map(role -> new SimpleGrantedAuthority(role.getName())).collect(Collectors.toList());
+                        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(user.getEmail(), null, authorities);
+                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        //final line : to set the authentication to security context
+                        if (SecurityContextHolder.getContext().getAuthentication() == null)
+                            SecurityContextHolder.getContext().setAuthentication(authentication);
+                    }
+
+
+                });
+            } catch (ExpiredJwtException e) {
+                request.setAttribute("error", "Token Expired");
+                // e.printStackTrace();
+
+            } catch (Exception e) {
+                request.setAttribute("error", "Invalid Token");
+//                e.printStackTrace();
+            }
         }
+       filterChain.doFilter(request, response);
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        return request.getRequestURI().startsWith("/api/v1/auth");
     }
 }
