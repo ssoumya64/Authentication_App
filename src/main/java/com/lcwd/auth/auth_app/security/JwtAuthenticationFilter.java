@@ -38,45 +38,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         logger.info("Authorization header : {}", header);
 
         if (header != null && header.startsWith("Bearer ")) {
-
-
-            //token extract and validate then authentication create and then security context ke ander set karunga.
-
-            String token = header.substring(7);
-            //check for access token
-
+           String token = header.substring(7);
             try {
-
                 if (!jwtService.isAccessToken(token)) {
                     filterChain.doFilter(request, response);
                     return;
                 }
-
-
                 Jws<Claims> parse = jwtService.parseToken(token);
-
-
                 Claims payload = parse.getPayload();
-
-
                 String userId = payload.getSubject();
                 UUID userUuid = UserHelper.parseUUID(userId);
 
                 userRepository.findById(userUuid).ifPresent(user -> {
-
-                    //check for user enable or not
-
-                    if (user.isEnable()) {
-                        // user mil chuka hai database se
+                   if (user.isEnable()) {
                         List<GrantedAuthority> authorities = user.getRoles() == null ? List.of() : user.getRoles().stream().map(role -> new SimpleGrantedAuthority(role.getName())).collect(Collectors.toList());
                         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(user.getEmail(), null, authorities);
                         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                        //final line : to set the authentication to security context
                         if (SecurityContextHolder.getContext().getAuthentication() == null)
                             SecurityContextHolder.getContext().setAuthentication(authentication);
                     }
-
-
                 });
             } catch (ExpiredJwtException e) {
                 request.setAttribute("error", "Token Expired");
