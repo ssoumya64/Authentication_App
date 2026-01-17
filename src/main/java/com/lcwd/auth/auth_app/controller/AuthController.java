@@ -10,6 +10,7 @@ import com.lcwd.auth.auth_app.entity.Users;
 import com.lcwd.auth.auth_app.security.CookiesService;
 import com.lcwd.auth.auth_app.security.JwtService;
 import com.lcwd.auth.auth_app.service.AuthService;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -23,6 +24,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -158,5 +160,25 @@ public class AuthController {
     public ResponseEntity<UserDtos> registerUser(@RequestBody UserDtos userDtos){
         UserDtos userDtos1 = authService.registerUser(userDtos);
         return ResponseEntity.status(HttpStatus.CREATED).body(userDtos1);
+    }
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletRequest request,HttpServletResponse response){
+        readRefreshTokenFromRequest(null,request).ifPresent(token->{
+            try{
+                if(jwtService.isRefreshToken(token)){
+                    String jti = jwtService.getJti(token);
+                    refreshTokenRepository.findByJti(jti).ifPresent(rt->{
+                        rt.setRevoked(true);
+                        refreshTokenRepository.save(rt);
+                    });
+                }
+            }catch (JwtException ignored){
+
+            }
+        });
+        cookiesService.clearRefreshCookie(request,response);
+        cookiesService.addNoStoreHeader(response);
+        SecurityContextHolder.clearContext();
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }
