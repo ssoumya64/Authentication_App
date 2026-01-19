@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lcwd.auth.auth_app.dtos.ApiError;
 import com.lcwd.auth.auth_app.security.JwtAuthenticationFilter;
 import com.lcwd.auth.auth_app.security.CustomUserDetailsService;
+import com.lcwd.auth.auth_app.security.OAuth2SuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -36,6 +37,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService userDetailsService;
+    private final OAuth2SuccessHandler oAuth2SuccessHandler;
 
     @Bean
     @Order(1)
@@ -53,6 +55,11 @@ public class SecurityConfig {
                                 .anyRequest()
                                 .authenticated())
                 .authenticationProvider(authenticationProvider()) // Add this line
+                .oauth2Login(oauth2->
+                           oauth2.successHandler(oAuth2SuccessHandler)
+                                   .failureHandler(null)
+                        )
+                .logout(AbstractHttpConfigurer::disable)
                 .exceptionHandling(ex->ex.authenticationEntryPoint((request,response,e)->{
                     e.printStackTrace();
                     response.setStatus(401);
